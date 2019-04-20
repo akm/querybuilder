@@ -7,20 +7,6 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-type Ope string
-
-const (
-	LT  Ope = "<"
-	LTE Ope = "<="
-	GT  Ope = ">"
-	GTE Ope = ">="
-	EQ  Ope = "="
-)
-
-func (ope Ope) String() string {
-	return string(ope)
-}
-
 type FilterFunc func(*datastore.Query) *datastore.Query
 type AssignFunc func(interface{})
 type AssignFuncs []AssignFunc
