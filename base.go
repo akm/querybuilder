@@ -58,8 +58,16 @@ func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBui
 	qb.filters = append(qb.filters, func(q *datastore.Query) *datastore.Query {
 		return q.Filter(field+ope.String(), value)
 	})
-	qb.sortFields = append([]string{field}, qb.sortFields...)
+	if !qb.sortFields.Has(field) {
+		qb.sortFields = append([]string{field}, qb.sortFields...)
+	}
 	return qb
+}
+
+const utf8LastChar = "\xef\xbf\xbd"
+
+func (qb *QueryBuilder) Starts(field, value string) *QueryBuilder {
+	return qb.Gte(field, value).Lte(field, value+utf8LastChar)
 }
 
 func (qb *QueryBuilder) Asc(field string) *QueryBuilder {
@@ -73,6 +81,10 @@ func (qb *QueryBuilder) Desc(field string) *QueryBuilder {
 func (qb *QueryBuilder) AddSort(field string) *QueryBuilder {
 	qb.sortFields = append(qb.sortFields, field)
 	return qb
+}
+
+func (qb *QueryBuilder) SortFields() Strings {
+	return qb.sortFields
 }
 
 func (qb *QueryBuilder) ProjectFields() Strings {
