@@ -51,63 +51,62 @@ func TestBuilder(t *testing.T) {
 		}
 
 		{
-			{
-				b := New("Int1", "Str1", "Str2")
-				assert.Equal(t, Strings{"Int1", "Str1", "Str2"}, b.ProjectFields())
-				q, _ := b.Build(datastore.NewQuery(Kind4Test))
-				var entities []*Entity4Test
-				_, err := q.GetAll(ctx, &entities)
-				assert.NoError(t, err)
-				assert.Equal(t, len(Entities), len(entities))
-				for _, entity := range entities {
-					assert.Equal(t, 0, entity.Int2)
-					assert.Equal(t, EnumA0, entity.EnumA)
-				}
-			}
-
-			{
-				queryValue := 1
-				b := New("Int2", "Str1", "Str2")
-				b.Eq("Int2", queryValue)
-				assert.Equal(t, Strings{"Str1", "Str2"}, b.ProjectFields())
-				q, f := b.Build(datastore.NewQuery(Kind4Test))
-				var entities []*Entity4Test
-				_, err := q.GetAll(ctx, &entities)
-				assert.NoError(t, err)
-				assert.Equal(t, 2, len(entities))
-				for _, entity := range entities {
-					assert.Equal(t, 0, entity.Int1)
-					assert.Equal(t, 0, entity.Int2)
-					assert.Equal(t, EnumA0, entity.EnumA)
-				}
-				assert.NoError(t, f.AssignAll(entities))
-				for _, entity := range entities {
-					assert.Equal(t, 0, entity.Int1)
-					assert.Equal(t, queryValue, entity.Int2) // assigned by f returned from Build
-					assert.Equal(t, EnumA0, entity.EnumA)
-				}
-			}
-
-			{
-				rangeLow := 2
-				rangeHigh := 5 // not included
-				b := New("Int1", "Str1", "EnumA")
-				b.Gte("Int1", rangeLow)
-				b.Lt("Int1", rangeHigh)
-				assert.Equal(t, Strings{"Int1", "Str1", "EnumA"}, b.ProjectFields())
-				q, _ := b.Build(datastore.NewQuery(Kind4Test))
-				var entities []*Entity4Test
-				_, err := q.GetAll(ctx, &entities)
-				assert.NoError(t, err)
-				assert.Equal(t, 3, len(entities))
-
-				int1s := []int{}
-				for _, entity := range entities {
-					int1s = append(int1s, entity.Int1)
-				}
-				assert.Equal(t, []int{2, 3, 4}, int1s)
+			b := New("Int1", "Str1", "Str2")
+			assert.Equal(t, Strings{"Int1", "Str1", "Str2"}, b.ProjectFields())
+			q, _ := b.Build(datastore.NewQuery(Kind4Test))
+			var entities []*Entity4Test
+			_, err := q.GetAll(ctx, &entities)
+			assert.NoError(t, err)
+			assert.Equal(t, len(Entities), len(entities))
+			for _, entity := range entities {
+				assert.Equal(t, 0, entity.Int2)
+				assert.Equal(t, EnumA0, entity.EnumA)
 			}
 		}
+
+		{
+			queryValue := 1
+			b := New("Int2", "Str1", "Str2")
+			b.Eq("Int2", queryValue)
+			assert.Equal(t, Strings{"Str1", "Str2"}, b.ProjectFields())
+			q, f := b.Build(datastore.NewQuery(Kind4Test))
+			var entities []*Entity4Test
+			_, err := q.GetAll(ctx, &entities)
+			assert.NoError(t, err)
+			assert.Equal(t, 2, len(entities))
+			for _, entity := range entities {
+				assert.Equal(t, 0, entity.Int1)
+				assert.Equal(t, 0, entity.Int2)
+				assert.Equal(t, EnumA0, entity.EnumA)
+			}
+			assert.NoError(t, f.AssignAll(entities))
+			for _, entity := range entities {
+				assert.Equal(t, 0, entity.Int1)
+				assert.Equal(t, queryValue, entity.Int2) // assigned by f returned from Build
+				assert.Equal(t, EnumA0, entity.EnumA)
+			}
+		}
+
+		{
+			rangeLow := 2
+			rangeHigh := 5 // not included
+			b := New("Int1", "Str1", "EnumA")
+			b.Gte("Int1", rangeLow)
+			b.Lt("Int1", rangeHigh)
+			assert.Equal(t, Strings{"Int1", "Str1", "EnumA"}, b.ProjectFields())
+			q, _ := b.Build(datastore.NewQuery(Kind4Test))
+			var entities []*Entity4Test
+			_, err := q.GetAll(ctx, &entities)
+			assert.NoError(t, err)
+			assert.Equal(t, 3, len(entities))
+
+			int1s := []int{}
+			for _, entity := range entities {
+				int1s = append(int1s, entity.Int1)
+			}
+			assert.Equal(t, []int{2, 3, 4}, int1s)
+		}
+
 		return nil
 	})
 }
