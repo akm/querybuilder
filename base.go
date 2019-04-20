@@ -1,6 +1,7 @@
 package querybuilder
 
 import (
+	"fmt"
 	"reflect"
 
 	"google.golang.org/appengine/datastore"
@@ -16,8 +17,36 @@ const (
 	EQ  Ope = "="
 )
 
+func (ope Ope) String() string {
+	return string(ope)
+}
+
 type FilterFunc func(*datastore.Query) *datastore.Query
 type AssignFunc func(interface{})
+type AssignFuncs []AssignFunc
+
+func (s AssignFuncs) Assign(entity interface{}) {
+	fmt.Printf("entity %v\n", entity)
+	for _, f := range s {
+		f(entity)
+	}
+}
+
+func (s AssignFuncs) AssignAll(entities interface{}) error {
+	v := reflect.ValueOf(entities)
+	switch v.Type().Kind() {
+	case reflect.Slice:
+		l := v.Len()
+		for i := 0; i < l; i++ {
+			s.Assign(v.Index(i).Interface())
+		}
+	case reflect.Ptr:
+		return s.AssignAll(v.Elem().Interface())
+	default:
+		return fmt.Errorf("Unsupported type of slice %T", entities)
+	}
+	return nil
+}
 
 type Strings []string
 
@@ -45,17 +74,24 @@ type QueryBuilder struct {
 	ignored    Strings
 	sortFields Strings
 	filters    []FilterFunc
-	assigns    []AssignFunc
+	assigns    AssignFuncs
+}
+
+func New(fields ...string) *QueryBuilder {
+	return &QueryBuilder{Fields: fields}
 }
 
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
 	qb.filters = append(qb.filters, func(q *datastore.Query) *datastore.Query {
-		return q.Filter(field+EQ, value)
+		return q.Filter(field+EQ.String(), value)
 	})
-	qb.assigns = append(qb.assigns, func(entiry interface{}) {
-		e := reflect.ValueOf(entity)
+	qb.assigns = append(qb.assigns, func(entity interface{}) {
+		e := reflect.Indirect(reflect.ValueOf(entity))
+		fmt.Printf("e.Type().Kind() => %v\n", e.Type().Kind())
 		v := reflect.ValueOf(value)
 		f := e.FieldByName(field)
+		fmt.Printf("e: %v\n", e)
+		fmt.Printf("field: %q f: %v\n", field, f)
 		f.Set(v)
 	})
 	qb.ignored = append(qb.ignored, field)
@@ -80,7 +116,7 @@ func (qb *QueryBuilder) Gte(field string, value interface{}) *QueryBuilder {
 
 func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBuilder {
 	qb.filters = append(qb.filters, func(q *datastore.Query) *datastore.Query {
-		return q.Filter(field+EQ, value)
+		return q.Filter(field+ope.String(), value)
 	})
 	qb.sortFields = append([]string{field}, qb.sortFields...)
 	return qb
@@ -100,10 +136,10 @@ func (qb *QueryBuilder) AddSort(field string) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) ProjectFields() Strings {
-	return qb.Fields.Except(ignored)
+	return qb.Fields.Except(qb.ignored)
 }
 
-func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFunc) {
+func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFuncs) {
 	for _, f := range qb.filters {
 		q = f(q)
 	}
@@ -116,9 +152,5 @@ func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFunc)
 			q = q.Project(fields...)
 		}
 	}
-	return q, func(entity interface{}) {
-		for _, f := range qb.assigns {
-			f(entity)
-		}
-	}
+	return q, qb.assigns
 }
