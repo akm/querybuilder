@@ -80,10 +80,14 @@ func (qb *QueryBuilder) ProjectFields() Strings {
 	return qb.Fields.Except(qb.ignored)
 }
 
-func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFuncs) {
+func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
 	for _, f := range qb.filters {
 		q = f(q)
 	}
+	return q
+}
+
+func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, AssignFuncs) {
 	for _, f := range qb.sortFields {
 		q = q.Order(f)
 	}
@@ -94,4 +98,8 @@ func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFuncs
 		}
 	}
 	return q, qb.assigns
+}
+
+func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFuncs) {
+	return qb.BuildForList(qb.BuildForCount(q))
 }

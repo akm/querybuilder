@@ -125,6 +125,29 @@ func TestBuilder(t *testing.T) {
 			assert.Equal(t, []int{2, 3}, int1s)
 		}
 
+		{
+			b := New("Int1", "Str1", "Str2", "EnumA")
+			b.Starts("Str2", "ba") // "bar" and "baz"
+			assert.Equal(t, Strings{"Int1", "Str1", "Str2", "EnumA"}, b.ProjectFields())
+			assert.Equal(t, Strings{"Str2"}, b.SortFields())
+
+			var qc *datastore.Query
+			{
+				qc = b.BuildForCount(datastore.NewQuery(Kind4Test))
+				c, err := qc.Count(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, 2, c)
+			}
+			{
+				q, f := b.BuildForList(qc)
+				var entities []*Entity4Test
+				_, err := q.GetAll(ctx, &entities)
+				assert.NoError(t, err)
+				assert.Equal(t, 2, len(entities))
+				assert.NoError(t, f.AssignAll(entities))
+			}
+		}
+
 		return nil
 	})
 }
