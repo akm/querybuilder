@@ -1,7 +1,6 @@
 package querybuilder
 
 import (
-	"fmt"
 	"reflect"
 
 	"google.golang.org/appengine/datastore"
@@ -27,11 +26,8 @@ func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
 	})
 	qb.assigns = append(qb.assigns, func(entity interface{}) {
 		e := reflect.Indirect(reflect.ValueOf(entity))
-		fmt.Printf("e.Type().Kind() => %v\n", e.Type().Kind())
 		v := reflect.ValueOf(value)
 		f := e.FieldByName(field)
-		fmt.Printf("e: %v\n", e)
-		fmt.Printf("field: %q f: %v\n", field, f)
 		f.Set(v)
 	})
 	qb.ignored = append(qb.ignored, field)
