@@ -38,7 +38,11 @@ func AssignFuncFor(field string, value interface{}) AssignFunc {
 		case reflect.Struct:
 			v := reflect.ValueOf(value)
 			f := e.FieldByName(field)
-			f.Set(v)
+			if f.IsValid() {
+				f.Set(v)
+			} else {
+				panic(fmt.Sprintf("%T.%s not found. %v", entity, field, entity))
+			}
 		default:
 			panic(fmt.Sprintf("%T is not a struct. %v", entity, entity))
 		}
