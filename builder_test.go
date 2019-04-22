@@ -299,21 +299,27 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 				assertExpecteds(pattern.after, entities)
 			}
 
-			// Without Distinct
+			genSetup := func(otherFields []string, queryValue int, distinction FilterFunc) func() ([]*ComplicatedEntity4Test, AssignFuncs) {
+				return func() ([]*ComplicatedEntity4Test, AssignFuncs) {
+					var entities []*ComplicatedEntity4Test
+					b := New(append([]string{"ID", "Name", "Subs.I1"}, otherFields...)...)
+					b.Eq("Subs.I1", queryValue)
+					b.Asc("ID")
+					assert.Equal(t, append(Strings{"ID", "Name"}, otherFields...), b.ProjectFields())
+					q, f := b.Build(datastore.NewQuery(ComplicatedKind4Test))
+					if distinction != nil {
+						q = distinction(q)
+					}
+					_, err := q.GetAll(ctx, &entities)
+					assert.NoError(t, err)
+					return entities, f
+				}
+			}
+
+			queryValue := 3 // Subs.I
+
 			{
-				queryValue := 3
-				withoutDistinct := &pattern{
-					setup: func() ([]*ComplicatedEntity4Test, AssignFuncs) {
-						var entities []*ComplicatedEntity4Test
-						b := New("ID", "Name", "Subs.I1", "Subs.S1")
-						b.Eq("Subs.I1", queryValue)
-						b.Asc("ID")
-						assert.Equal(t, Strings{"ID", "Name", "Subs.S1"}, b.ProjectFields())
-						q, f := b.Build(datastore.NewQuery(ComplicatedKind4Test))
-						_, err := q.GetAll(ctx, &entities)
-						assert.NoError(t, err)
-						return entities, f
-					},
+				basePattern := &pattern{
 					before: []*expected{
 						{5, "Quux", []*sub{{0, "A"}}}, // This SubI data must be set but datastore doesn't set it
 						{5, "Quux", []*sub{{0, "C"}}},
@@ -327,8 +333,118 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 						{6, "Corge", []*sub{{queryValue, "C"}}},
 					},
 				}
-				assertPattern(withoutDistinct)
+
+				{ // Without Distinct
+					ptn := &pattern{
+						setup:  genSetup([]string{"Subs.S1"}, queryValue, nil),
+						before: basePattern.before,
+						after:  basePattern.after,
+					}
+					assertPattern(ptn)
+				}
+
+				{ // With Distinct
+					ptn := &pattern{
+						setup: genSetup([]string{"Subs.S1"}, queryValue, func(q *datastore.Query) *datastore.Query {
+							return q.Distinct()
+						}),
+						before: basePattern.before,
+						after:  basePattern.after,
+					}
+					assertPattern(ptn)
+				}
+
+				{ // With DistinctOn #1
+					ptn := &pattern{
+						setup: genSetup([]string{"Subs.S1"}, queryValue, func(q *datastore.Query) *datastore.Query {
+							return q.DistinctOn("ID", "Name", "Subs.S1")
+						}),
+						before: basePattern.before,
+						after:  basePattern.after,
+					}
+					assertPattern(ptn)
+				}
 			}
+
+			{
+				queryValueIgnoredPattern := &pattern{
+					before: []*expected{
+						{5, "Quux", []*sub{{0, "A"}}},  // This Subs.I data must be set but datastore doesn't set it
+						{6, "Corge", []*sub{{0, "B"}}}, // This Subs.I data must be set but datastore doesn't set it
+					},
+					after: []*expected{
+						{5, "Quux", []*sub{{queryValue, "A"}}},  // This Subs.I is not value set with Subs.S "A". It must be 1.
+						{6, "Corge", []*sub{{queryValue, "B"}}}, // This Subs.I is not value set with Subs.S "B". It must be 2.
+					},
+				}
+
+				{ // With DistinctOn #2
+					ptn := &pattern{
+						setup: genSetup([]string{"Subs.S1"}, queryValue, func(q *datastore.Query) *datastore.Query {
+							return q.DistinctOn("ID", "Name")
+						}),
+						before: queryValueIgnoredPattern.before,
+						after:  queryValueIgnoredPattern.after,
+					}
+					assertPattern(ptn)
+				}
+
+				{ // With DistinctOn #3
+					ptn := &pattern{
+						setup: genSetup([]string{"Subs.S1"}, queryValue, func(q *datastore.Query) *datastore.Query {
+							return q.DistinctOn("ID", "Name", "Subs.I1")
+						}),
+						before: queryValueIgnoredPattern.before,
+						after:  queryValueIgnoredPattern.after,
+					}
+					assertPattern(ptn)
+				}
+			}
+
+			{
+				subsIgnoredPattern := &pattern{
+					before: []*expected{
+						{5, "Quux", []*sub{}},
+						{6, "Corge", []*sub{}},
+					},
+					after: []*expected{
+						{5, "Quux", []*sub{}},
+						{6, "Corge", []*sub{}},
+					},
+				}
+
+				{ // Withiout Distinct
+					ptn := &pattern{
+						setup:  genSetup([]string{}, queryValue, nil),
+						before: subsIgnoredPattern.before,
+						after:  subsIgnoredPattern.after,
+					}
+					assertPattern(ptn)
+				}
+
+				{ // With Distinct
+					ptn := &pattern{
+						setup: genSetup([]string{}, queryValue, func(q *datastore.Query) *datastore.Query {
+							return q.Distinct()
+						}),
+						before: subsIgnoredPattern.before,
+						after:  subsIgnoredPattern.after,
+					}
+					assertPattern(ptn)
+				}
+
+				{ // With DistinctOn
+					ptn := &pattern{
+						setup: genSetup([]string{}, queryValue, func(q *datastore.Query) *datastore.Query {
+							return q.DistinctOn("ID", "Name")
+						}),
+						before: subsIgnoredPattern.before,
+						after:  subsIgnoredPattern.after,
+					}
+					assertPattern(ptn)
+				}
+			}
+
 		}
 
 		return nil
