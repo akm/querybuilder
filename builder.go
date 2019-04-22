@@ -18,8 +18,13 @@ func New(fields ...string) *QueryBuilder {
 	return &QueryBuilder{Fields: fields}
 }
 
+func (qb *QueryBuilder) AddFilter(f FilterFunc) *QueryBuilder {
+	qb.filters = append(qb.filters, f)
+	return qb
+}
+
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
-	qb.filters = append(qb.filters, func(q *datastore.Query) *datastore.Query {
+	qb.AddFilter(func(q *datastore.Query) *datastore.Query {
 		return q.Filter(field+EQ.String(), value)
 	})
 	qb.assigns = append(qb.assigns, AssignFuncFor(field, value))
@@ -44,7 +49,7 @@ func (qb *QueryBuilder) Gte(field string, value interface{}) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBuilder {
-	qb.filters = append(qb.filters, func(q *datastore.Query) *datastore.Query {
+	qb.AddFilter(func(q *datastore.Query) *datastore.Query {
 		return q.Filter(field+ope.String(), value)
 	})
 	if !qb.sortFields.Has(field) {
