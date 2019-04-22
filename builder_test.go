@@ -209,6 +209,7 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
+		// Single nested field
 		{
 			queryValue := 2
 			b := New("ID", "Name", "Sub1.I1", "Sub1.S1")
@@ -253,59 +254,81 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 			impl(patterns2)
 		}
 
+		// Slice field
 		{
-			queryValue := 3
-			b := New("ID", "Name", "Subs.I1", "Subs.S1")
-			b.Eq("Subs.I1", queryValue)
-			b.Asc("ID")
-			assert.Equal(t, Strings{"ID", "Name", "Subs.S1"}, b.ProjectFields())
-			q, f := b.Build(datastore.NewQuery(ComplicatedKind4Test))
-			var entities []*ComplicatedEntity4Test
-			_, err := q.GetAll(ctx, &entities)
-			assert.NoError(t, err)
+			type sub struct {
+				I int
+				S string
+			}
 
-			type pattern struct {
+			type expected struct {
 				ID   int
 				Name string
-				SubI int
-				SubS string
+				Subs []*sub
 			}
-
-			patterns1 := []pattern{
-				{5, "Quux", 0, "A"}, // This SubI data must be set but datastore doesn't set it
-				{5, "Quux", 0, "C"},
-				{6, "Corge", 0, "B"}, // This SubI data must be set but datastore doesn't set it
-				{6, "Corge", 0, "C"},
-			}
-
-			patterns2 := []pattern{
-				{5, "Quux", queryValue, "A"}, // This SubI is not value set with SubS "A". It must be 1.
-				{5, "Quux", queryValue, "C"},
-				{6, "Corge", queryValue, "B"}, // This SubI is not value set with SubS "B". It must be 2.
-				{6, "Corge", queryValue, "C"},
-			}
-
-			impl := func(patterns []pattern) error {
-				if assert.Equal(t, len(patterns), len(entities)) {
-					for i, ptn := range patterns {
-						e := entities[i]
-						assert.Equal(t, ptn.ID, e.ID)
-						assert.Equal(t, ptn.Name, e.Name)
-						if assert.Equal(t, 1, len(e.Subs)) {
-							{
-								s := e.Subs[0]
-								assert.Equal(t, ptn.SubI, s.I1)
-								assert.Equal(t, ptn.SubS, s.S1)
-							}
-						}
+			assertExpected := func(ex *expected, e *ComplicatedEntity4Test) {
+				assert.Equal(t, ex.ID, e.ID)
+				assert.Equal(t, ex.Name, e.Name)
+				if assert.Equal(t, len(ex.Subs), len(e.Subs)) {
+					for i, sub := range ex.Subs {
+						s := e.Subs[i]
+						assert.Equal(t, sub.I, s.I1)
+						assert.Equal(t, sub.S, s.S1)
 					}
 				}
-				return nil
 			}
 
-			impl(patterns1)
-			f.AssignAll(&entities)
-			impl(patterns2)
+			type pattern struct {
+				setup  func() ([]*ComplicatedEntity4Test, AssignFuncs)
+				before []*expected
+				after  []*expected
+			}
+
+			assertExpecteds := func(expecteds []*expected, entities []*ComplicatedEntity4Test) {
+				if assert.Equal(t, len(expecteds), len(entities)) {
+					for i, expected := range expecteds {
+						assertExpected(expected, entities[i])
+					}
+				}
+			}
+
+			assertPattern := func(pattern *pattern) {
+				entities, f := pattern.setup()
+				assertExpecteds(pattern.before, entities)
+				f.AssignAll(entities)
+				assertExpecteds(pattern.after, entities)
+			}
+
+			// Without Distinct
+			{
+				queryValue := 3
+				withoutDistinct := &pattern{
+					setup: func() ([]*ComplicatedEntity4Test, AssignFuncs) {
+						var entities []*ComplicatedEntity4Test
+						b := New("ID", "Name", "Subs.I1", "Subs.S1")
+						b.Eq("Subs.I1", queryValue)
+						b.Asc("ID")
+						assert.Equal(t, Strings{"ID", "Name", "Subs.S1"}, b.ProjectFields())
+						q, f := b.Build(datastore.NewQuery(ComplicatedKind4Test))
+						_, err := q.GetAll(ctx, &entities)
+						assert.NoError(t, err)
+						return entities, f
+					},
+					before: []*expected{
+						{5, "Quux", []*sub{{0, "A"}}}, // This SubI data must be set but datastore doesn't set it
+						{5, "Quux", []*sub{{0, "C"}}},
+						{6, "Corge", []*sub{{0, "B"}}}, // This SubI data must be set but datastore doesn't set it
+						{6, "Corge", []*sub{{0, "C"}}},
+					},
+					after: []*expected{
+						{5, "Quux", []*sub{{queryValue, "A"}}}, // This SubI is not value set with SubS "A". It must be 1.
+						{5, "Quux", []*sub{{queryValue, "C"}}},
+						{6, "Corge", []*sub{{queryValue, "B"}}}, // This SubI is not value set with SubS "B". It must be 2.
+						{6, "Corge", []*sub{{queryValue, "C"}}},
+					},
+				}
+				assertPattern(withoutDistinct)
+			}
 		}
 
 		return nil
