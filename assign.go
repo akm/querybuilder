@@ -5,14 +5,17 @@ import (
 	"reflect"
 )
 
-type AssignFunc func(interface{})
+type AssignFunc func(interface{}) error
 type AssignFuncs []AssignFunc
 
-func (s AssignFuncs) Assign(entity interface{}) {
+func (s AssignFuncs) Assign(entity interface{}) error {
 	fmt.Printf("entity %v\n", entity)
 	for _, f := range s {
-		f(entity)
+		if err := f(entity); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (s AssignFuncs) AssignAll(entities interface{}) error {
@@ -21,7 +24,9 @@ func (s AssignFuncs) AssignAll(entities interface{}) error {
 	case reflect.Slice:
 		l := v.Len()
 		for i := 0; i < l; i++ {
-			s.Assign(v.Index(i).Interface())
+			if err := s.Assign(v.Index(i).Interface()); err != nil {
+				return nil
+			}
 		}
 	case reflect.Ptr:
 		return s.AssignAll(v.Elem().Interface())
@@ -32,7 +37,7 @@ func (s AssignFuncs) AssignAll(entities interface{}) error {
 }
 
 func AssignFuncFor(field string, value interface{}) AssignFunc {
-	return func(entity interface{}) {
+	return func(entity interface{}) error {
 		e := reflect.ValueOf(entity)
 		if e.Type().Kind() == reflect.Ptr {
 			e = e.Elem()
@@ -43,11 +48,12 @@ func AssignFuncFor(field string, value interface{}) AssignFunc {
 			f := e.FieldByName(field)
 			if f.IsValid() {
 				f.Set(v)
+				return nil
 			} else {
-				panic(fmt.Sprintf("Entity type: %T Field: %s not found. %v", entity, field, entity))
+				return fmt.Errorf("Entity type: %T Field: %s not found. %v", entity, field, entity)
 			}
 		default:
-			panic(fmt.Sprintf("Entity type: %T is not a struct. %v", entity, entity))
+			return fmt.Errorf("Entity type: %T is not a struct. %v", entity, entity)
 		}
 	}
 }
