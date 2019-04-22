@@ -34,8 +34,13 @@ func (s AssignFuncs) AssignAll(entities interface{}) error {
 func AssignFuncFor(field string, value interface{}) AssignFunc {
 	return func(entity interface{}) {
 		e := reflect.Indirect(reflect.ValueOf(entity))
-		v := reflect.ValueOf(value)
-		f := e.FieldByName(field)
-		f.Set(v)
+		switch e.Type().Kind() {
+		case reflect.Struct:
+			v := reflect.ValueOf(value)
+			f := e.FieldByName(field)
+			f.Set(v)
+		default:
+			panic(fmt.Sprintf("%T is not a struct. %v", entity, entity))
+		}
 	}
 }
