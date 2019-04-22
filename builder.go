@@ -1,8 +1,6 @@
 package querybuilder
 
 import (
-	"reflect"
-
 	"google.golang.org/appengine/datastore"
 )
 
@@ -24,12 +22,7 @@ func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
 	qb.filters = append(qb.filters, func(q *datastore.Query) *datastore.Query {
 		return q.Filter(field+EQ.String(), value)
 	})
-	qb.assigns = append(qb.assigns, func(entity interface{}) {
-		e := reflect.Indirect(reflect.ValueOf(entity))
-		v := reflect.ValueOf(value)
-		f := e.FieldByName(field)
-		f.Set(v)
-	})
+	qb.assigns = append(qb.assigns, AssignFuncFor(field, value))
 	qb.ignored = append(qb.ignored, field)
 	return qb
 }

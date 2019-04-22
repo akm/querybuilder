@@ -30,3 +30,12 @@ func (s AssignFuncs) AssignAll(entities interface{}) error {
 	}
 	return nil
 }
+
+func AssignFuncFor(field string, value interface{}) AssignFunc {
+	return func(entity interface{}) {
+		e := reflect.Indirect(reflect.ValueOf(entity))
+		v := reflect.ValueOf(value)
+		f := e.FieldByName(field)
+		f.Set(v)
+	}
+}
