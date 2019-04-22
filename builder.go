@@ -10,7 +10,7 @@ type QueryBuilder struct {
 	Fields     Strings
 	ignored    Strings
 	sortFields Strings
-	filters    []FilterFunc
+	conditions []FilterFunc
 	assigns    AssignFuncs
 }
 
@@ -18,13 +18,13 @@ func New(fields ...string) *QueryBuilder {
 	return &QueryBuilder{Fields: fields}
 }
 
-func (qb *QueryBuilder) AddFilter(f FilterFunc) *QueryBuilder {
-	qb.filters = append(qb.filters, f)
+func (qb *QueryBuilder) AddCondition(f FilterFunc) *QueryBuilder {
+	qb.conditions = append(qb.conditions, f)
 	return qb
 }
 
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
-	qb.AddFilter(func(q *datastore.Query) *datastore.Query {
+	qb.AddCondition(func(q *datastore.Query) *datastore.Query {
 		return q.Filter(field+EQ.String(), value)
 	})
 	qb.assigns = append(qb.assigns, AssignFuncFor(field, value))
@@ -49,7 +49,7 @@ func (qb *QueryBuilder) Gte(field string, value interface{}) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBuilder {
-	qb.AddFilter(func(q *datastore.Query) *datastore.Query {
+	qb.AddCondition(func(q *datastore.Query) *datastore.Query {
 		return q.Filter(field+ope.String(), value)
 	})
 	if !qb.sortFields.Has(field) {
@@ -86,7 +86,7 @@ func (qb *QueryBuilder) ProjectFields() Strings {
 }
 
 func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
-	for _, f := range qb.filters {
+	for _, f := range qb.conditions {
 		q = f(q)
 	}
 	return q
