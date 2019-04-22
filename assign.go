@@ -44,10 +44,10 @@ func AssignFuncFor(field string, value interface{}) AssignFunc {
 			if f.IsValid() {
 				f.Set(v)
 			} else {
-				panic(fmt.Sprintf("%T.%s not found. %v", entity, field, entity))
+				panic(fmt.Sprintf("Entity type: %T Field: %s not found. %v", entity, field, entity))
 			}
 		default:
-			panic(fmt.Sprintf("%T is not a struct. %v", entity, entity))
+			panic(fmt.Sprintf("Entity type: %T is not a struct. %v", entity, entity))
 		}
 	}
 }
