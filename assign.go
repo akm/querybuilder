@@ -33,7 +33,10 @@ func (s AssignFuncs) AssignAll(entities interface{}) error {
 
 func AssignFuncFor(field string, value interface{}) AssignFunc {
 	return func(entity interface{}) {
-		e := reflect.Indirect(reflect.ValueOf(entity))
+		e := reflect.ValueOf(entity)
+		if e.Type().Kind() == reflect.Ptr {
+			e = e.Elem()
+		}
 		switch e.Type().Kind() {
 		case reflect.Struct:
 			v := reflect.ValueOf(value)
