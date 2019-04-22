@@ -11,6 +11,7 @@ type QueryBuilder struct {
 	ignored    Strings
 	sortFields Strings
 	conditions []FilterFunc
+	filters    []FilterFunc
 	assigns    AssignFuncs
 }
 
@@ -20,6 +21,11 @@ func New(fields ...string) *QueryBuilder {
 
 func (qb *QueryBuilder) AddCondition(f FilterFunc) *QueryBuilder {
 	qb.conditions = append(qb.conditions, f)
+	return qb
+}
+
+func (qb *QueryBuilder) AddFilter(f FilterFunc) *QueryBuilder {
+	qb.filters = append(qb.filters, f)
 	return qb
 }
 
@@ -81,6 +87,18 @@ func (qb *QueryBuilder) SortFields() Strings {
 	return qb.sortFields
 }
 
+func (qb *QueryBuilder) Offset(v int) *QueryBuilder {
+	return qb.AddFilter(func(q *datastore.Query) *datastore.Query {
+		return q.Offset(v)
+	})
+}
+
+func (qb *QueryBuilder) Limit(v int) *QueryBuilder {
+	return qb.AddFilter(func(q *datastore.Query) *datastore.Query {
+		return q.Limit(v)
+	})
+}
+
 func (qb *QueryBuilder) ProjectFields() Strings {
 	return qb.Fields.Except(qb.ignored)
 }
@@ -101,6 +119,9 @@ func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assi
 		if len(fields) > 0 {
 			q = q.Project(fields...)
 		}
+	}
+	for _, f := range qb.filters {
+		q = f(q)
 	}
 	return q, qb.assigns
 }

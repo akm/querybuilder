@@ -148,6 +148,24 @@ func TestBuilder(t *testing.T) {
 			}
 		}
 
+		{
+			b := New()
+			b.Asc("Int1")
+			b.Offset(2)
+			b.Limit(3)
+			assert.Equal(t, Strings{}, b.ProjectFields())
+			q, _ := b.Build(datastore.NewQuery(Kind4Test))
+			var entities []*Entity4Test
+			_, err := q.GetAll(ctx, &entities)
+			assert.NoError(t, err)
+			assert.Equal(t, 3, len(entities))
+			int1s := []int{}
+			for _, entity := range entities {
+				int1s = append(int1s, entity.Int1)
+			}
+			assert.Equal(t, []int{3, 4, 5}, int1s)
+		}
+
 		return nil
 	})
 }
