@@ -5,12 +5,12 @@ import (
 )
 
 type QueryBuilder struct {
-	Fields     Strings
-	Ignored    Strings
-	SortFields Strings
-	Conditions []*Condition
-	Filters    []*ValuedFilter
-	Assigns    Assigners
+	Fields     Strings         `json:"fields,omitempty"`
+	Ignored    Strings         `json:"ignored,omitempty"`
+	SortFields Strings         `json:"sort_fields,omitempty"`
+	Conditions []*Condition    `json:"conditions,omitempty"`
+	Filters    []*ValuedFilter `json:"filters,omitempty"`
+	Assigns    Assigners       `json:"assigns,omitempty"`
 }
 
 func New(fields ...string) *QueryBuilder {

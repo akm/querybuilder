@@ -2,6 +2,9 @@ package querybuilder
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
+	"strings"
 	"testing"
 
 	"google.golang.org/appengine/datastore"
@@ -10,6 +13,21 @@ import (
 
 	"github.com/akm/querybuilder/testsupport"
 )
+
+func MarshalQueryBuilder(t *testing.T, src *QueryBuilder) []byte {
+	bytes, err := json.MarshalIndent(src, "", "  ")
+	assert.NoError(t, err)
+	return bytes
+}
+
+func AssertJsonWith(t *testing.T, b *QueryBuilder, path string) {
+	{
+		bytes, err := ioutil.ReadFile(path)
+		assert.NoError(t, err)
+		serialized := MarshalQueryBuilder(t, b)
+		assert.Equal(t, strings.TrimSpace(string(bytes)), string(serialized))
+	}
+}
 
 type EnumA int
 
@@ -62,6 +80,7 @@ func TestBuilder(t *testing.T) {
 				assert.Equal(t, 0, entity.Int2)
 				assert.Equal(t, EnumA0, entity.EnumA)
 			}
+			AssertJsonWith(t, b, "builder_test/no_condition.json")
 		}
 
 		{
@@ -85,6 +104,7 @@ func TestBuilder(t *testing.T) {
 				assert.Equal(t, queryValue, entity.Int2) // assigned by f returned from Build
 				assert.Equal(t, EnumA0, entity.EnumA)
 			}
+			AssertJsonWith(t, b, "builder_test/simple_eq.json")
 		}
 
 		{

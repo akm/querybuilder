@@ -7,8 +7,8 @@ import (
 )
 
 type Assigner struct {
-	Field string
-	Value interface{}
+	Field string      `json:"field"`
+	Value interface{} `json:"value"`
 }
 
 func (a *Assigner) Do(entity interface{}) error {
