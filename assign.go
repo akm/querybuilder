@@ -10,7 +10,6 @@ type AssignFunc func(interface{}) error
 type AssignFuncs []AssignFunc
 
 func (s AssignFuncs) Assign(entity interface{}) error {
-	fmt.Printf("entity %v\n", entity)
 	for _, f := range s {
 		if err := f(entity); err != nil {
 			return err
