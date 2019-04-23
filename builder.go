@@ -4,37 +4,33 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-type FilterFunc func(*datastore.Query) *datastore.Query
-
 type QueryBuilder struct {
-	Fields     Strings
-	ignored    Strings
-	sortFields Strings
-	conditions []FilterFunc
-	filters    []FilterFunc
-	assigns    AssignFuncs
+	Fields     Strings         `json:"fields,omitempty"`
+	Ignored    Strings         `json:"ignored,omitempty"`
+	SortFields Strings         `json:"sort_fields,omitempty"`
+	Conditions []*Condition    `json:"conditions,omitempty"`
+	Filters    []*ValuedFilter `json:"filters,omitempty"`
+	Assigns    Assigners       `json:"assigns,omitempty"`
 }
 
 func New(fields ...string) *QueryBuilder {
 	return &QueryBuilder{Fields: fields}
 }
 
-func (qb *QueryBuilder) AddCondition(f FilterFunc) *QueryBuilder {
-	qb.conditions = append(qb.conditions, f)
+func (qb *QueryBuilder) AddCondition(field string, ope Ope, value interface{}) *QueryBuilder {
+	qb.Conditions = append(qb.Conditions, &Condition{Field: field, Ope: ope, Value: value})
 	return qb
 }
 
-func (qb *QueryBuilder) AddFilter(f FilterFunc) *QueryBuilder {
-	qb.filters = append(qb.filters, f)
+func (qb *QueryBuilder) AddIntFilter(name string, value int) *QueryBuilder {
+	qb.Filters = append(qb.Filters, &ValuedFilter{Name: name, IntValue: value})
 	return qb
 }
 
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
-	qb.AddCondition(func(q *datastore.Query) *datastore.Query {
-		return q.Filter(field+EQ.String(), value)
-	})
-	qb.assigns = append(qb.assigns, AssignFuncFor(field, value))
-	qb.ignored = append(qb.ignored, field)
+	qb.AddCondition(field, EQ, value)
+	qb.Assigns = append(qb.Assigns, AssignerFor(field, value))
+	qb.Ignored = append(qb.Ignored, field)
 	return qb
 }
 
@@ -55,11 +51,9 @@ func (qb *QueryBuilder) Gte(field string, value interface{}) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBuilder {
-	qb.AddCondition(func(q *datastore.Query) *datastore.Query {
-		return q.Filter(field+ope.String(), value)
-	})
-	if !qb.sortFields.Has(field) {
-		qb.sortFields = append([]string{field}, qb.sortFields...)
+	qb.AddCondition(field, ope, value)
+	if !qb.SortFields.Has(field) {
+		qb.SortFields = append([]string{field}, qb.SortFields...)
 	}
 	return qb
 }
@@ -79,39 +73,31 @@ func (qb *QueryBuilder) Desc(field string) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) AddSort(field string) *QueryBuilder {
-	qb.sortFields = append(qb.sortFields, field)
+	qb.SortFields = append(qb.SortFields, field)
 	return qb
 }
 
-func (qb *QueryBuilder) SortFields() Strings {
-	return qb.sortFields
-}
-
 func (qb *QueryBuilder) Offset(v int) *QueryBuilder {
-	return qb.AddFilter(func(q *datastore.Query) *datastore.Query {
-		return q.Offset(v)
-	})
+	return qb.AddIntFilter("offset", v)
 }
 
 func (qb *QueryBuilder) Limit(v int) *QueryBuilder {
-	return qb.AddFilter(func(q *datastore.Query) *datastore.Query {
-		return q.Limit(v)
-	})
+	return qb.AddIntFilter("limit", v)
 }
 
 func (qb *QueryBuilder) ProjectFields() Strings {
-	return qb.Fields.Except(qb.ignored)
+	return qb.Fields.Except(qb.Ignored)
 }
 
 func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
-	for _, f := range qb.conditions {
-		q = f(q)
+	for _, f := range qb.Conditions {
+		q = f.Call(q)
 	}
 	return q
 }
 
-func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, AssignFuncs) {
-	for _, f := range qb.sortFields {
+func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assigners) {
+	for _, f := range qb.SortFields {
 		q = q.Order(f)
 	}
 	{
@@ -120,12 +106,12 @@ func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assi
 			q = q.Project(fields...)
 		}
 	}
-	for _, f := range qb.filters {
-		q = f(q)
+	for _, f := range qb.Filters {
+		q = f.Call(q)
 	}
-	return q, qb.assigns
+	return q, qb.Assigns
 }
 
-func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFuncs) {
+func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, Assigners) {
 	return qb.BuildForList(qb.BuildForCount(q))
 }

@@ -2,6 +2,9 @@ package querybuilder
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
+	"strings"
 	"testing"
 
 	"google.golang.org/appengine/datastore"
@@ -10,6 +13,21 @@ import (
 
 	"github.com/akm/querybuilder/testsupport"
 )
+
+func MarshalQueryBuilder(t *testing.T, src *QueryBuilder) []byte {
+	bytes, err := json.MarshalIndent(src, "", "  ")
+	assert.NoError(t, err)
+	return bytes
+}
+
+func AssertJsonWith(t *testing.T, b *QueryBuilder, path string) {
+	{
+		bytes, err := ioutil.ReadFile(path)
+		assert.NoError(t, err)
+		serialized := MarshalQueryBuilder(t, b)
+		assert.Equal(t, strings.TrimSpace(string(bytes)), string(serialized))
+	}
+}
 
 type EnumA int
 
@@ -62,6 +80,7 @@ func TestBuilder(t *testing.T) {
 				assert.Equal(t, 0, entity.Int2)
 				assert.Equal(t, EnumA0, entity.EnumA)
 			}
+			AssertJsonWith(t, b, "builder_test/no_condition.json")
 		}
 
 		{
@@ -85,6 +104,7 @@ func TestBuilder(t *testing.T) {
 				assert.Equal(t, queryValue, entity.Int2) // assigned by f returned from Build
 				assert.Equal(t, EnumA0, entity.EnumA)
 			}
+			AssertJsonWith(t, b, "builder_test/simple_eq.json")
 		}
 
 		{
@@ -111,7 +131,7 @@ func TestBuilder(t *testing.T) {
 			b := New("Int1", "Str1", "Str2", "EnumA")
 			b.Starts("Str2", "ba") // "bar" and "baz"
 			assert.Equal(t, Strings{"Int1", "Str1", "Str2", "EnumA"}, b.ProjectFields())
-			assert.Equal(t, Strings{"Str2"}, b.SortFields())
+			assert.Equal(t, Strings{"Str2"}, b.SortFields)
 			q, _ := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
 			_, err := q.GetAll(ctx, &entities)
@@ -129,7 +149,7 @@ func TestBuilder(t *testing.T) {
 			b := New("Int1", "Str1", "Str2", "EnumA")
 			b.Starts("Str2", "ba") // "bar" and "baz"
 			assert.Equal(t, Strings{"Int1", "Str1", "Str2", "EnumA"}, b.ProjectFields())
-			assert.Equal(t, Strings{"Str2"}, b.SortFields())
+			assert.Equal(t, Strings{"Str2"}, b.SortFields)
 
 			var qc *datastore.Query
 			{
@@ -279,7 +299,7 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 			}
 
 			type pattern struct {
-				setup  func() ([]*ComplicatedEntity4Test, AssignFuncs)
+				setup  func() ([]*ComplicatedEntity4Test, Assigners)
 				before []*expected
 				after  []*expected
 			}
@@ -299,8 +319,8 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 				assertExpecteds(pattern.after, entities)
 			}
 
-			genSetup := func(otherFields []string, queryValue int, distinction FilterFunc) func() ([]*ComplicatedEntity4Test, AssignFuncs) {
-				return func() ([]*ComplicatedEntity4Test, AssignFuncs) {
+			genSetup := func(otherFields []string, queryValue int, distinction QueryFilter) func() ([]*ComplicatedEntity4Test, Assigners) {
+				return func() ([]*ComplicatedEntity4Test, Assigners) {
 					var entities []*ComplicatedEntity4Test
 					b := New(append([]string{"ID", "Name", "Subs.I1"}, otherFields...)...)
 					b.Eq("Subs.I1", queryValue)

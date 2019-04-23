@@ -1,0 +1,23 @@
+{
+  "fields": [
+    "Int2",
+    "Str1",
+    "Str2"
+  ],
+  "ignored": [
+    "Int2"
+  ],
+  "conditions": [
+    {
+      "field": "Int2",
+      "ope": "=",
+      "value": 1
+    }
+  ],
+  "assigns": [
+    {
+      "field": "Int2",
+      "value": 1
+    }
+  ]
+}
