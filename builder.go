@@ -6,11 +6,11 @@ import (
 
 type QueryBuilder struct {
 	Fields     Strings
-	ignored    Strings
-	sortFields Strings
-	conditions []*Condition
-	filters    []*ValuedFilter
-	assigns    Assigners
+	Ignored    Strings
+	SortFields Strings
+	Conditions []*Condition
+	Filters    []*ValuedFilter
+	Assigns    Assigners
 }
 
 func New(fields ...string) *QueryBuilder {
@@ -18,19 +18,19 @@ func New(fields ...string) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) AddCondition(field string, ope Ope, value interface{}) *QueryBuilder {
-	qb.conditions = append(qb.conditions, &Condition{Field: field, Ope: ope, Value: value})
+	qb.Conditions = append(qb.Conditions, &Condition{Field: field, Ope: ope, Value: value})
 	return qb
 }
 
 func (qb *QueryBuilder) AddIntFilter(name string, value int) *QueryBuilder {
-	qb.filters = append(qb.filters, &ValuedFilter{Name: name, IntValue: value})
+	qb.Filters = append(qb.Filters, &ValuedFilter{Name: name, IntValue: value})
 	return qb
 }
 
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
 	qb.AddCondition(field, EQ, value)
-	qb.assigns = append(qb.assigns, AssignerFor(field, value))
-	qb.ignored = append(qb.ignored, field)
+	qb.Assigns = append(qb.Assigns, AssignerFor(field, value))
+	qb.Ignored = append(qb.Ignored, field)
 	return qb
 }
 
@@ -52,8 +52,8 @@ func (qb *QueryBuilder) Gte(field string, value interface{}) *QueryBuilder {
 
 func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBuilder {
 	qb.AddCondition(field, ope, value)
-	if !qb.sortFields.Has(field) {
-		qb.sortFields = append([]string{field}, qb.sortFields...)
+	if !qb.SortFields.Has(field) {
+		qb.SortFields = append([]string{field}, qb.SortFields...)
 	}
 	return qb
 }
@@ -73,12 +73,8 @@ func (qb *QueryBuilder) Desc(field string) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) AddSort(field string) *QueryBuilder {
-	qb.sortFields = append(qb.sortFields, field)
+	qb.SortFields = append(qb.SortFields, field)
 	return qb
-}
-
-func (qb *QueryBuilder) SortFields() Strings {
-	return qb.sortFields
 }
 
 func (qb *QueryBuilder) Offset(v int) *QueryBuilder {
@@ -90,18 +86,18 @@ func (qb *QueryBuilder) Limit(v int) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) ProjectFields() Strings {
-	return qb.Fields.Except(qb.ignored)
+	return qb.Fields.Except(qb.Ignored)
 }
 
 func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
-	for _, f := range qb.conditions {
+	for _, f := range qb.Conditions {
 		q = f.Call(q)
 	}
 	return q
 }
 
 func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assigners) {
-	for _, f := range qb.sortFields {
+	for _, f := range qb.SortFields {
 		q = q.Order(f)
 	}
 	{
@@ -110,10 +106,10 @@ func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assi
 			q = q.Project(fields...)
 		}
 	}
-	for _, f := range qb.filters {
+	for _, f := range qb.Filters {
 		q = f.Call(q)
 	}
-	return q, qb.assigns
+	return q, qb.Assigns
 }
 
 func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, Assigners) {

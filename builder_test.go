@@ -111,7 +111,7 @@ func TestBuilder(t *testing.T) {
 			b := New("Int1", "Str1", "Str2", "EnumA")
 			b.Starts("Str2", "ba") // "bar" and "baz"
 			assert.Equal(t, Strings{"Int1", "Str1", "Str2", "EnumA"}, b.ProjectFields())
-			assert.Equal(t, Strings{"Str2"}, b.SortFields())
+			assert.Equal(t, Strings{"Str2"}, b.SortFields)
 			q, _ := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
 			_, err := q.GetAll(ctx, &entities)
@@ -129,7 +129,7 @@ func TestBuilder(t *testing.T) {
 			b := New("Int1", "Str1", "Str2", "EnumA")
 			b.Starts("Str2", "ba") // "bar" and "baz"
 			assert.Equal(t, Strings{"Int1", "Str1", "Str2", "EnumA"}, b.ProjectFields())
-			assert.Equal(t, Strings{"Str2"}, b.SortFields())
+			assert.Equal(t, Strings{"Str2"}, b.SortFields)
 
 			var qc *datastore.Query
 			{
