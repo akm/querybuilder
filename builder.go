@@ -6,12 +6,38 @@ import (
 
 type FilterFunc func(*datastore.Query) *datastore.Query
 
+type Condition struct {
+	Field string      `json:"field"`
+	Ope   Ope         `json:"ope"`
+	Value interface{} `json:"value"`
+}
+
+func (c *Condition) Call(q *datastore.Query) *datastore.Query {
+	return q.Filter(c.Field+c.Ope.String(), c.Value)
+}
+
+type ValuedFilter struct {
+	Name     string `json:"name"`
+	IntValue int    `json:"value"`
+}
+
+func (vf *ValuedFilter) Call(q *datastore.Query) *datastore.Query {
+	switch vf.Name {
+	case "offset":
+		return q.Offset(vf.IntValue)
+	case "limit":
+		return q.Limit(vf.IntValue)
+	default:
+		return q
+	}
+}
+
 type QueryBuilder struct {
 	Fields     Strings
 	ignored    Strings
 	sortFields Strings
-	conditions []FilterFunc
-	filters    []FilterFunc
+	conditions []*Condition
+	filters    []*ValuedFilter
 	assigns    AssignFuncs
 }
 
@@ -19,20 +45,18 @@ func New(fields ...string) *QueryBuilder {
 	return &QueryBuilder{Fields: fields}
 }
 
-func (qb *QueryBuilder) AddCondition(f FilterFunc) *QueryBuilder {
-	qb.conditions = append(qb.conditions, f)
+func (qb *QueryBuilder) AddCondition(field string, ope Ope, value interface{}) *QueryBuilder {
+	qb.conditions = append(qb.conditions, &Condition{Field: field, Ope: ope, Value: value})
 	return qb
 }
 
-func (qb *QueryBuilder) AddFilter(f FilterFunc) *QueryBuilder {
-	qb.filters = append(qb.filters, f)
+func (qb *QueryBuilder) AddIntFilter(name string, value int) *QueryBuilder {
+	qb.filters = append(qb.filters, &ValuedFilter{Name: name, IntValue: value})
 	return qb
 }
 
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
-	qb.AddCondition(func(q *datastore.Query) *datastore.Query {
-		return q.Filter(field+EQ.String(), value)
-	})
+	qb.AddCondition(field, EQ, value)
 	qb.assigns = append(qb.assigns, AssignFuncFor(field, value))
 	qb.ignored = append(qb.ignored, field)
 	return qb
@@ -55,9 +79,7 @@ func (qb *QueryBuilder) Gte(field string, value interface{}) *QueryBuilder {
 }
 
 func (qb *QueryBuilder) Ineq(ope Ope, field string, value interface{}) *QueryBuilder {
-	qb.AddCondition(func(q *datastore.Query) *datastore.Query {
-		return q.Filter(field+ope.String(), value)
-	})
+	qb.AddCondition(field, ope, value)
 	if !qb.sortFields.Has(field) {
 		qb.sortFields = append([]string{field}, qb.sortFields...)
 	}
@@ -88,15 +110,11 @@ func (qb *QueryBuilder) SortFields() Strings {
 }
 
 func (qb *QueryBuilder) Offset(v int) *QueryBuilder {
-	return qb.AddFilter(func(q *datastore.Query) *datastore.Query {
-		return q.Offset(v)
-	})
+	return qb.AddIntFilter("offset", v)
 }
 
 func (qb *QueryBuilder) Limit(v int) *QueryBuilder {
-	return qb.AddFilter(func(q *datastore.Query) *datastore.Query {
-		return q.Limit(v)
-	})
+	return qb.AddIntFilter("limit", v)
 }
 
 func (qb *QueryBuilder) ProjectFields() Strings {
@@ -105,7 +123,7 @@ func (qb *QueryBuilder) ProjectFields() Strings {
 
 func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
 	for _, f := range qb.conditions {
-		q = f(q)
+		q = f.Call(q)
 	}
 	return q
 }
@@ -121,7 +139,7 @@ func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assi
 		}
 	}
 	for _, f := range qb.filters {
-		q = f(q)
+		q = f.Call(q)
 	}
 	return q, qb.assigns
 }
