@@ -6,19 +6,44 @@ import (
 	"strings"
 )
 
-type AssignFunc func(interface{}) error
-type AssignFuncs []AssignFunc
+type Assigner struct {
+	Field string
+	Value interface{}
+}
 
-func (s AssignFuncs) Assign(entity interface{}) error {
-	for _, f := range s {
-		if err := f(entity); err != nil {
+func (a *Assigner) Do(entity interface{}) error {
+	e := reflect.ValueOf(entity)
+	if e.Type().Kind() == reflect.Ptr {
+		e = e.Elem()
+	}
+	v := reflect.ValueOf(a.Value)
+	switch e.Type().Kind() {
+	case reflect.Struct:
+		err := ReflectWalkIn(&e, a.Field, ".", func(f *reflect.Value) error {
+			f.Set(v)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	default:
+		return fmt.Errorf("Entity type: %T is not a struct. %v", entity, entity)
+	}
+}
+
+type Assigners []*Assigner
+
+func (s Assigners) Assign(entity interface{}) error {
+	for _, i := range s {
+		if err := i.Do(entity); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s AssignFuncs) AssignAll(entities interface{}) error {
+func (s Assigners) AssignAll(entities interface{}) error {
 	v := reflect.ValueOf(entities)
 	switch v.Type().Kind() {
 	case reflect.Slice:
@@ -36,27 +61,8 @@ func (s AssignFuncs) AssignAll(entities interface{}) error {
 	return nil
 }
 
-func AssignFuncFor(field string, value interface{}) AssignFunc {
-	return func(entity interface{}) error {
-		e := reflect.ValueOf(entity)
-		if e.Type().Kind() == reflect.Ptr {
-			e = e.Elem()
-		}
-		v := reflect.ValueOf(value)
-		switch e.Type().Kind() {
-		case reflect.Struct:
-			err := ReflectWalkIn(&e, field, ".", func(f *reflect.Value) error {
-				f.Set(v)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-			return nil
-		default:
-			return fmt.Errorf("Entity type: %T is not a struct. %v", entity, entity)
-		}
-	}
+func AssignerFor(field string, value interface{}) *Assigner {
+	return &Assigner{Field: field, Value: value}
 }
 
 func ReflectWalkIn(base *reflect.Value, field, sep string, f func(*reflect.Value) error) error {

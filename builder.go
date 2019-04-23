@@ -10,7 +10,7 @@ type QueryBuilder struct {
 	sortFields Strings
 	conditions []*Condition
 	filters    []*ValuedFilter
-	assigns    AssignFuncs
+	assigns    Assigners
 }
 
 func New(fields ...string) *QueryBuilder {
@@ -29,7 +29,7 @@ func (qb *QueryBuilder) AddIntFilter(name string, value int) *QueryBuilder {
 
 func (qb *QueryBuilder) Eq(field string, value interface{}) *QueryBuilder {
 	qb.AddCondition(field, EQ, value)
-	qb.assigns = append(qb.assigns, AssignFuncFor(field, value))
+	qb.assigns = append(qb.assigns, AssignerFor(field, value))
 	qb.ignored = append(qb.ignored, field)
 	return qb
 }
@@ -100,7 +100,7 @@ func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
 	return q
 }
 
-func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, AssignFuncs) {
+func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assigners) {
 	for _, f := range qb.sortFields {
 		q = q.Order(f)
 	}
@@ -116,6 +116,6 @@ func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assi
 	return q, qb.assigns
 }
 
-func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, AssignFuncs) {
+func (qb *QueryBuilder) Build(q *datastore.Query) (*datastore.Query, Assigners) {
 	return qb.BuildForList(qb.BuildForCount(q))
 }

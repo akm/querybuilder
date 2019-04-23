@@ -279,7 +279,7 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 			}
 
 			type pattern struct {
-				setup  func() ([]*ComplicatedEntity4Test, AssignFuncs)
+				setup  func() ([]*ComplicatedEntity4Test, Assigners)
 				before []*expected
 				after  []*expected
 			}
@@ -299,8 +299,8 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 				assertExpecteds(pattern.after, entities)
 			}
 
-			genSetup := func(otherFields []string, queryValue int, distinction QueryFilter) func() ([]*ComplicatedEntity4Test, AssignFuncs) {
-				return func() ([]*ComplicatedEntity4Test, AssignFuncs) {
+			genSetup := func(otherFields []string, queryValue int, distinction QueryFilter) func() ([]*ComplicatedEntity4Test, Assigners) {
+				return func() ([]*ComplicatedEntity4Test, Assigners) {
 					var entities []*ComplicatedEntity4Test
 					b := New(append([]string{"ID", "Name", "Subs.I1"}, otherFields...)...)
 					b.Eq("Subs.I1", queryValue)
