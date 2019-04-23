@@ -299,7 +299,7 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 				assertExpecteds(pattern.after, entities)
 			}
 
-			genSetup := func(otherFields []string, queryValue int, distinction FilterFunc) func() ([]*ComplicatedEntity4Test, AssignFuncs) {
+			genSetup := func(otherFields []string, queryValue int, distinction QueryFilter) func() ([]*ComplicatedEntity4Test, AssignFuncs) {
 				return func() ([]*ComplicatedEntity4Test, AssignFuncs) {
 					var entities []*ComplicatedEntity4Test
 					b := New(append([]string{"ID", "Name", "Subs.I1"}, otherFields...)...)

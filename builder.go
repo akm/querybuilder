@@ -4,8 +4,6 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-type FilterFunc func(*datastore.Query) *datastore.Query
-
 type Condition struct {
 	Field string      `json:"field"`
 	Ope   Ope         `json:"ope"`
