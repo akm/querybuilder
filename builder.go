@@ -8,7 +8,7 @@ type QueryBuilder struct {
 	Fields     Strings         `json:"fields,omitempty"`
 	Ignored    Strings         `json:"ignored,omitempty"`
 	SortFields Strings         `json:"sort_fields,omitempty"`
-	Conditions []*Condition    `json:"conditions,omitempty"`
+	Conditions Conditions      `json:"conditions,omitempty"`
 	Filters    []*ValuedFilter `json:"filters,omitempty"`
 	Assigns    Assigners       `json:"assigns,omitempty"`
 }
@@ -90,10 +90,7 @@ func (qb *QueryBuilder) ProjectFields() Strings {
 }
 
 func (qb *QueryBuilder) BuildForCount(q *datastore.Query) *datastore.Query {
-	for _, f := range qb.Conditions {
-		q = f.Call(q)
-	}
-	return q
+	return qb.Conditions.Call(q)
 }
 
 func (qb *QueryBuilder) BuildForList(q *datastore.Query) (*datastore.Query, Assigners) {
