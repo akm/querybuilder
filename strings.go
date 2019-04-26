@@ -20,3 +20,13 @@ func (s Strings) Except(v Strings) Strings {
 	}
 	return r
 }
+
+func (s Strings) Uniq() Strings {
+	r := Strings{}
+	for _, i := range s {
+		if !r.Has(i) {
+			r = append(r, i)
+		}
+	}
+	return r
+}

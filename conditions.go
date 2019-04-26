@@ -14,3 +14,17 @@ func (s Conditions) Call(q *datastore.Query) *datastore.Query {
 	}
 	return q
 }
+
+func (s Conditions) IneqFields() Strings {
+	r := Strings{}
+	for _, i := range s {
+		if i.Ope != EQ {
+			r = append(r, i.Field)
+		}
+	}
+	return r.Uniq()
+}
+
+func (s Conditions) HasMultipleIneqFields() bool {
+	return len(s.IneqFields()) > 1
+}
