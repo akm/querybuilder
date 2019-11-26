@@ -7,7 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/appengine/datastore"
+	"google.golang.org/api/iterator"
+
+	"cloud.google.com/go/datastore"
 
 	"github.com/stretchr/testify/assert"
 
@@ -57,14 +59,37 @@ var Entities = []*Entity4Test{
 	{Int1: 6, Int2: 8, Str1: "f", Str2: "corge", EnumA: EnumA3},
 }
 
+func DeleteAll(t *testing.T, ctx context.Context, cli *datastore.Client, kind string) {
+	q := datastore.NewQuery(kind).KeysOnly()
+	iter := cli.Run(ctx, q)
+	var err error
+	for {
+		var key *datastore.Key
+		if key, err = iter.Next(nil); err != nil {
+			break
+		} else {
+			cli.Delete(ctx, key)
+		}
+	}
+	if err != iterator.Done {
+		assert.NoError(t, err)
+	}
+	return
+}
+
 func TestBuilder(t *testing.T) {
 	testsupport.WithAEContext(t, func(ctx context.Context) error {
+		cli, err := datastore.NewClient(ctx, "")
+		assert.NoError(t, err)
+
+		DeleteAll(t, ctx, cli, Kind4Test)
+
 		{
 			keys := make([]*datastore.Key, len(Entities))
 			for i, _ := range keys {
-				keys[i] = datastore.NewIncompleteKey(ctx, Kind4Test, nil)
+				keys[i] = datastore.IncompleteKey(Kind4Test, nil)
 			}
-			_, err := datastore.PutMulti(ctx, keys, Entities)
+			_, err := cli.PutMulti(ctx, keys, Entities)
 			assert.NoError(t, err)
 		}
 
@@ -73,7 +98,7 @@ func TestBuilder(t *testing.T) {
 			assert.Equal(t, Strings{"Int1", "Str1", "Str2"}, b.ProjectFields())
 			q, _ := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
-			_, err := q.GetAll(ctx, &entities)
+			_, err := cli.GetAll(ctx, q, &entities)
 			assert.NoError(t, err)
 			assert.Equal(t, len(Entities), len(entities))
 			for _, entity := range entities {
@@ -90,7 +115,7 @@ func TestBuilder(t *testing.T) {
 			assert.Equal(t, Strings{"Str1", "Str2"}, b.ProjectFields())
 			q, f := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
-			_, err := q.GetAll(ctx, &entities)
+			_, err := cli.GetAll(ctx, q, &entities)
 			assert.NoError(t, err)
 			assert.Equal(t, 2, len(entities))
 			for _, entity := range entities {
@@ -116,7 +141,7 @@ func TestBuilder(t *testing.T) {
 			assert.Equal(t, Strings{"Int1", "Str1", "EnumA"}, b.ProjectFields())
 			q, _ := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
-			_, err := q.GetAll(ctx, &entities)
+			_, err := cli.GetAll(ctx, q, &entities)
 			assert.NoError(t, err)
 			assert.Equal(t, 3, len(entities))
 
@@ -134,7 +159,7 @@ func TestBuilder(t *testing.T) {
 			assert.Equal(t, Strings{"Str2"}, b.SortFields)
 			q, _ := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
-			_, err := q.GetAll(ctx, &entities)
+			_, err := cli.GetAll(ctx, q, &entities)
 			assert.NoError(t, err)
 			assert.Equal(t, 2, len(entities))
 
@@ -154,14 +179,14 @@ func TestBuilder(t *testing.T) {
 			var qc *datastore.Query
 			{
 				qc = b.BuildForCount(datastore.NewQuery(Kind4Test))
-				c, err := qc.Count(ctx)
+				c, err := cli.Count(ctx, qc)
 				assert.NoError(t, err)
 				assert.Equal(t, 2, c)
 			}
 			{
 				q, f := b.BuildForList(qc)
 				var entities []*Entity4Test
-				_, err := q.GetAll(ctx, &entities)
+				_, err := cli.GetAll(ctx, q, &entities)
 				assert.NoError(t, err)
 				assert.Equal(t, 2, len(entities))
 				assert.NoError(t, f.AssignAll(entities))
@@ -176,7 +201,7 @@ func TestBuilder(t *testing.T) {
 			assert.Equal(t, Strings{}, b.ProjectFields())
 			q, _ := b.Build(datastore.NewQuery(Kind4Test))
 			var entities []*Entity4Test
-			_, err := q.GetAll(ctx, &entities)
+			_, err := cli.GetAll(ctx, q, &entities)
 			assert.NoError(t, err)
 			assert.Equal(t, 3, len(entities))
 			int1s := []int{}
@@ -220,12 +245,17 @@ var ComplicatedEntities = []*ComplicatedEntity4Test{
 
 func TestBuilderWithComplicatedEntities(t *testing.T) {
 	testsupport.WithAEContext(t, func(ctx context.Context) error {
+		cli, err := datastore.NewClient(ctx, "")
+		assert.NoError(t, err)
+
+		DeleteAll(t, ctx, cli, ComplicatedKind4Test)
+
 		{
 			keys := make([]*datastore.Key, len(ComplicatedEntities))
 			for i, _ := range keys {
-				keys[i] = datastore.NewIncompleteKey(ctx, ComplicatedKind4Test, nil)
+				keys[i] = datastore.IncompleteKey(ComplicatedKind4Test, nil)
 			}
-			_, err := datastore.PutMulti(ctx, keys, ComplicatedEntities)
+			_, err := cli.PutMulti(ctx, keys, ComplicatedEntities)
 			assert.NoError(t, err)
 		}
 
@@ -238,7 +268,7 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 			assert.Equal(t, Strings{"ID", "Name", "Sub1.S1"}, b.ProjectFields())
 			q, f := b.Build(datastore.NewQuery(ComplicatedKind4Test))
 			var entities []*ComplicatedEntity4Test
-			_, err := q.GetAll(ctx, &entities)
+			_, err := cli.GetAll(ctx, q, &entities)
 			assert.NoError(t, err)
 
 			type pattern struct {
@@ -330,7 +360,7 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 					if distinction != nil {
 						q = distinction(q)
 					}
-					_, err := q.GetAll(ctx, &entities)
+					_, err := cli.GetAll(ctx, q, &entities)
 					assert.NoError(t, err)
 					return entities, f
 				}
@@ -409,16 +439,18 @@ func TestBuilderWithComplicatedEntities(t *testing.T) {
 					assertPattern(ptn)
 				}
 
-				{ // With DistinctOn #3
-					ptn := &pattern{
-						setup: genSetup([]string{"Subs.S1"}, queryValue, func(q *datastore.Query) *datastore.Query {
-							return q.DistinctOn("ID", "Name", "Subs.I1")
-						}),
-						before: queryValueIgnoredPattern.before,
-						after:  queryValueIgnoredPattern.after,
-					}
-					assertPattern(ptn)
-				}
+				// Can't use DistinctOn with Equality cause of the following error
+				//    rpc error: code = InvalidArgument desc = cannot use group by on a property with an equality filter
+				// { // With DistinctOn #3
+				// 	ptn := &pattern{
+				// 		setup: genSetup([]string{"Subs.S1"}, queryValue, func(q *datastore.Query) *datastore.Query {
+				// 			return q.DistinctOn("ID", "Name", "Subs.I1")
+				// 		}),
+				// 		before: queryValueIgnoredPattern.before,
+				// 		after:  queryValueIgnoredPattern.after,
+				// 	}
+				// 	assertPattern(ptn)
+				// }
 			}
 
 			{
