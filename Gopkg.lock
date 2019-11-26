@@ -43,7 +43,7 @@
   revision = "611e8accdfc92c4187d399e95ce826046d4c8d73"
 
 [[projects]]
-  digest = "1:065138b921b523fab4f53e9a8a4fd211fafd8e382e43ca0031dd4821df138664"
+  digest = "1:27342105b11e7ece8db350ee5b5d70d1857ad47ab1f58af9b8201299a17e31e3"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -61,8 +61,8 @@
     "ptypes/wrappers",
   ]
   pruneopts = "UT"
-  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
-  version = "v1.3.1"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   digest = "1:1d1cbf539d9ac35eb3148129f96be5537f1a1330cadcc7e3a83b4e72a59672a3"
@@ -107,12 +107,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:972c2427413d41a1e06ca4897e8528e5a1622894050e2f527b38ddf0f343f759"
+  digest = "1:8548c309c65a85933a625be5e7d52b6ac927ca30c56869fae58123b8a77a75e1"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
   pruneopts = "UT"
-  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
-  version = "v1.3.0"
+  revision = "221dbe5ed46703ee255b1da0dec05086f5035f62"
+  version = "v1.4.0"
 
 [[projects]]
   digest = "1:fbd07961034da405a6aebd31383f58975f9ece88b5ab295e1cc55f4d829a6459"
@@ -164,7 +164,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:68ad4c549c0def177e5146b40756b9e66d78b7276746023a12361de2f171ef41"
+  digest = "1:ecff0c65c627299ff316258a094c11f8e0582e3484563d6fe8eadfbf72abc137"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -177,7 +177,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "1f3472d942ba824034fb77cab6a6cfc1bc8a2c3c"
+  revision = "ffdde105785063a81acd95bdf89ea53f6e0aac2d"
 
 [[projects]]
   branch = "master"
@@ -273,7 +273,7 @@
   version = "v0.14.0"
 
 [[projects]]
-  digest = "1:15b86ee56687b2b842431678dacd1050900cd5ea24a47fa908ac32ce540664b7"
+  digest = "1:c98e9b93e6d178378530b920fe6e1aa4b3dd4972872111e83827746aa1f33ded"
   name = "google.golang.org/appengine"
   packages = [
     ".",
@@ -290,8 +290,8 @@
     "urlfetch",
   ]
   pruneopts = "UT"
-  revision = "54a98f90d1c46b7731eb8fb305d2a321c30ef610"
-  version = "v1.5.0"
+  revision = "971852bfffca25b069c31162ae8f247a3dba083b"
+  version = "v1.6.5"
 
 [[projects]]
   branch = "master"
@@ -361,6 +361,14 @@
   pruneopts = "UT"
   revision = "1a3960e4bd028ac0cec0a2afd27d7d8e67c11514"
   version = "v1.25.1"
+
+[[projects]]
+  digest = "1:b75b3deb2bce8bc079e16bb2aecfe01eb80098f5650f9e93e5643ca8b7b73737"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1f64d6156d11335c3f22d9330b0ad14fc1e789ce"
+  version = "v2.2.7"
 
 [[projects]]
   digest = "1:131158a88aad1f94854d0aa21a64af2802d0a470fb0f01cb33c04fafd2047111"

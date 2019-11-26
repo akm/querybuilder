@@ -25,6 +25,18 @@
 #   unused-packages = true
 
 
+[[constraint]]
+  name = "cloud.google.com/go"
+  version = "0.49.0"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  version = "1.4.0"
+
+[[constraint]]
+  name = "google.golang.org/api"
+  version = "0.14.0"
+
 [prune]
   go-tests = true
   unused-packages = true
