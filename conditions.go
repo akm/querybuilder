@@ -1,7 +1,7 @@
 package querybuilder
 
 import (
-	"google.golang.org/appengine/datastore"
+	"cloud.google.com/go/datastore"
 )
 
 type Conditions []*Condition
