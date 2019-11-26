@@ -88,7 +88,7 @@ func ReflectWalkInImpl(curr *reflect.Value, fields []string, f func(*reflect.Val
 	case reflect.Struct:
 		field := curr.FieldByName(fields[0])
 		if !field.IsValid() {
-			return fmt.Errorf("%s has no field named %s (from Entity %s %v)", curr.String(), fields[0])
+			return fmt.Errorf("%s has no field named %s", curr.String(), fields[0])
 		}
 		return ReflectWalkInImpl(&field, fields[1:], f)
 	default:
