@@ -20,7 +20,7 @@ func (a *Assigner) Do(entity interface{}) error {
 	switch e.Type().Kind() {
 	case reflect.Struct:
 		err := ReflectWalkIn(&e, a.Field, ".", func(f *reflect.Value) error {
-			f.Set(v)
+			f.Set(v.Convert(f.Type()))
 			return nil
 		})
 		if err != nil {
