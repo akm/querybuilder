@@ -37,7 +37,7 @@ func (c *Condition) OriginalTypeValue() interface{} {
 	v := reflect.ValueOf(c.Value)
 	pt, ok := primitiveTypeMap[v.Type().Kind()]
 	if ok && pt != nil {
-		return v.Convert(pt)
+		return v.Convert(pt).Interface()
 	} else {
 		return c.Value
 	}
